@@ -19,17 +19,26 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+Task<string> FetchFromDatabase()
+{
+    Task.Delay(3000).GetAwaiter().GetResult();
+    return Task.FromResult("Data");
+}
+
+async Task<string> FetchFromDatabaseAsync()
+{
+    await Task.Delay(3000);
+    return "Data";
+}
+
 app.MapGet("/sync", (ILogger<Program> _logger) =>
 {
+    _logger.LogInformation($"Thread counts: {ThreadPool.ThreadCount.ToString()}");
     string requestId = Guid.NewGuid().ToString();
-    _logger.LogInformation($"Starting SYNC request {requestId} with threadId: {Thread.CurrentThread.ManagedThreadId}");
 
     HttpClient client = new();
-    string data = client.GetStringAsync("https://google.com")
-    .GetAwaiter()
-    .GetResult();
+    string data = FetchFromDatabase().GetAwaiter().GetResult();
 
-    _logger.LogInformation($"Finishing SYNC request {requestId} with threadId: {Thread.CurrentThread.ManagedThreadId}");
     return "Ok";
 })
 .WithName("RunSync")
@@ -37,13 +46,12 @@ app.MapGet("/sync", (ILogger<Program> _logger) =>
 
 app.MapGet("/async", async (ILogger<Program> _logger) =>
 {
+    _logger.LogInformation($"Thread counts: {ThreadPool.ThreadCount.ToString()}");
     string requestId = Guid.NewGuid().ToString();
-    _logger.LogInformation($"Starting ASYNC request {requestId} with threadId: {Thread.CurrentThread.ManagedThreadId}");
 
     HttpClient client = new();
-    string data = await client.GetStringAsync("https://google.com");
+    string data = await FetchFromDatabaseAsync();
 
-    _logger.LogInformation($"Finishing ASYNC request {requestId} with threadId: {Thread.CurrentThread.ManagedThreadId}");
     return "Ok";
 })
 .WithName("RunAsync")
