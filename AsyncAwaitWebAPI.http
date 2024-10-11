@@ -1,0 +1,6 @@
+@AsyncAwaitWebAPI_HostAddress = http://localhost:5008
+
+GET {{AsyncAwaitWebAPI_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
