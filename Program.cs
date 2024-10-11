@@ -5,6 +5,9 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+builder.Logging.ClearProviders();
+builder.Logging.AddConsole();
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -16,29 +19,34 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-var summaries = new[]
+app.MapGet("/sync", (ILogger<Program> _logger) =>
 {
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
+    string requestId = Guid.NewGuid().ToString();
+    _logger.LogInformation($"Starting SYNC request {requestId} with threadId: {Thread.CurrentThread.ManagedThreadId}");
 
-app.MapGet("/weatherforecast", () =>
-{
-    var forecast =  Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
+    HttpClient client = new();
+    string data = client.GetStringAsync("https://google.com")
+    .GetAwaiter()
+    .GetResult();
+
+    _logger.LogInformation($"Finishing SYNC request {requestId} with threadId: {Thread.CurrentThread.ManagedThreadId}");
+    return "Ok";
 })
-.WithName("GetWeatherForecast")
+.WithName("RunSync")
+.WithOpenApi();
+
+app.MapGet("/async", async (ILogger<Program> _logger) =>
+{
+    string requestId = Guid.NewGuid().ToString();
+    _logger.LogInformation($"Starting ASYNC request {requestId} with threadId: {Thread.CurrentThread.ManagedThreadId}");
+
+    HttpClient client = new();
+    string data = await client.GetStringAsync("https://google.com");
+
+    _logger.LogInformation($"Finishing ASYNC request {requestId} with threadId: {Thread.CurrentThread.ManagedThreadId}");
+    return "Ok";
+})
+.WithName("RunAsync")
 .WithOpenApi();
 
 app.Run();
-
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}
